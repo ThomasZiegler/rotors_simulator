@@ -46,6 +46,7 @@
 #include "MagneticField.pb.h"
 #include "NavSatFix.pb.h"
 #include "Odometry.pb.h"
+#include "Drift.pb.h"
 #include "PoseWithCovarianceStamped.pb.h"
 #include "RollPitchYawrateThrust.pb.h"
 #include "TransformStamped.pb.h"
@@ -54,6 +55,7 @@
 #include "Vector3dStamped.pb.h"
 #include "WindSpeed.pb.h"
 #include "WrenchStamped.pb.h"
+#include "Bool.pb.h"
 
 //=============== ROS MSG TYPES ===============//
 #include <geometry_msgs/Point.h>
@@ -73,6 +75,7 @@
 #include <sensor_msgs/MagneticField.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Bool.h>
 
 #include "rotors_gazebo_plugins/common.h"
 
@@ -86,6 +89,7 @@ typedef const boost::shared_ptr<const gz_std_msgs::ConnectRosToGazeboTopic>
 typedef const boost::shared_ptr<const gz_std_msgs::Float32> GzFloat32MsgPtr;
 typedef const boost::shared_ptr<const gz_geometry_msgs::Odometry>
     GzOdometryMsgPtr;
+typedef const boost::shared_ptr<const gz_geometry_msgs::PoseWithCovarianceStamped> GzDriftMsgPtr;
 typedef const boost::shared_ptr<const gazebo::msgs::Pose> GzPoseMsgPtr;
 typedef const boost::shared_ptr<
     const gz_geometry_msgs::PoseWithCovarianceStamped>
@@ -250,6 +254,21 @@ class GazeboRosInterfacePlugin : public WorldPlugin {
                              ros::Publisher ros_publisher);
   nav_msgs::Odometry ros_odometry_msg_;
 
+  // GT ODOMETRY
+  void GzGtOdometryMsgCallback(GzOdometryMsgPtr& gz_gt_odometry_msg,
+                               ros::Publisher ros_publisher);
+  nav_msgs::Odometry ros_gt_odometry_msg_;
+
+  // GT POSE
+  void GzGtPoseMsgCallback(GzOdometryMsgPtr& gz_gt_pose_msg,
+                               ros::Publisher ros_publisher);
+  nav_msgs::Odometry ros_gt_pose_msg_;
+
+  // DRIFT
+  void GzDriftMsgCallback(GzDriftMsgPtr& gz_drift_msg,
+                          ros::Publisher ros_publisher);
+  geometry_msgs::PoseWithCovarianceStamped ros_drift_msg_;
+
   // POSE
   void GzPoseMsgCallback(GzPoseMsgPtr& gz_pose_msg,
                          ros::Publisher ros_publisher);
@@ -313,6 +332,11 @@ class GazeboRosInterfacePlugin : public WorldPlugin {
   void RosWindSpeedMsgCallback(
       const rotors_comm::WindSpeedConstPtr& ros_wind_speed_msg_ptr,
       gazebo::transport::PublisherPtr gz_publisher_ptr);
+
+  void RosDriftStartedMsgCallback(
+      const boost::shared_ptr<const std_msgs::Bool>& ros_drift_started_msg_ptr,
+      gazebo::transport::PublisherPtr gz_publisher_ptr);
+ 
 
   // ============================================ //
   // ====== TRANSFORM BROADCASTER RELATED ======= //

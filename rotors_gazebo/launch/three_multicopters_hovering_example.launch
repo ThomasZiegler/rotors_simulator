@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
   <arg name="world_name" default="basic"/>
   <arg name="enable_logging" default="false"/>

@@ -30,6 +30,7 @@
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
+#include <Eigen/Core>
 #include <gazebo/common/common.hh>
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/gazebo.hh>
@@ -37,12 +38,16 @@
 #include <opencv2/core/core.hpp>
 
 #include <mav_msgs/default_topics.h>  // This comes from the mav_comm repo
+#include <std_msgs/Bool.h>
 
 #include "rotors_gazebo_plugins/common.h"
 #include "rotors_gazebo_plugins/sdf_api_wrapper.hpp"
 
 #include "Odometry.pb.h"
 
+//TODO move to gazebo_ros_interface
+#include "Bool.pb.h"
+#include <ros/ros.h>
 
 namespace gazebo {
 
@@ -60,6 +65,8 @@ static constexpr double kDefaultCovarianceImageScale = 1.0;
 
 class GazeboOdometryPlugin : public ModelPlugin {
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
   typedef std::normal_distribution<> NormalDistribution;
   typedef std::uniform_real_distribution<> UniformDistribution;
   typedef std::deque<std::pair<int, gz_geometry_msgs::Odometry> > OdometryQueue;
@@ -74,6 +81,10 @@ class GazeboOdometryPlugin : public ModelPlugin {
         position_stamped_pub_topic_(mav_msgs::default_topics::POSITION),
         transform_stamped_pub_topic_(mav_msgs::default_topics::TRANSFORM),
         odometry_pub_topic_(mav_msgs::default_topics::ODOMETRY),
+        gt_odometry_pub_topic_("gt_odometry"),
+        gt_pose_pub_topic_("gt_pose"),
+        drift_pub_topic_("drift"),
+        drift_started_topic_("drift_started"),
         //---------------
         parent_frame_id_(kDefaultParentFrameId),
         child_frame_id_(kDefaultChildFrameId),
@@ -107,7 +118,25 @@ class GazeboOdometryPlugin : public ModelPlugin {
   ///           has loaded and listening to ConnectGazeboToRosTopic and ConnectRosToGazeboTopic messages).
   void CreatePubsAndSubs();
 
+//TODO move to gazebo_ros_interface
+  void driftStartedCallback(const boost::shared_ptr<const gz_std_msgs::Bool> & p_boolMsg);
+
+  bool drift_started_;
+  std::string drift_started_topic_;
+  gazebo::transport::SubscriberPtr drift_started_sub_;
+
   OdometryQueue odometry_queue_;
+  OdometryQueue gt_pose_queue_;
+
+  Eigen::Vector3d accumulated_drift_position_;
+  Eigen::Quaterniond accumulated_drift_quaternion_;
+
+  ignition::math::Pose3d initial_pose_;
+
+  Eigen::Vector3d previous_position_;
+  Eigen::Quaterniond previous_quaternion_;
+
+  double previous_t_;
 
   std::string namespace_;
   std::string pose_pub_topic_;
@@ -115,6 +144,9 @@ class GazeboOdometryPlugin : public ModelPlugin {
   std::string position_stamped_pub_topic_;
   std::string transform_stamped_pub_topic_;
   std::string odometry_pub_topic_;
+  std::string gt_odometry_pub_topic_;
+  std::string gt_pose_pub_topic_;
+  std::string drift_pub_topic_;
   std::string parent_frame_id_;
   std::string child_frame_id_;
   std::string link_name_;
@@ -123,13 +155,19 @@ class GazeboOdometryPlugin : public ModelPlugin {
   NormalDistribution attitude_n_[3];
   NormalDistribution linear_velocity_n_[3];
   NormalDistribution angular_velocity_n_[3];
+  NormalDistribution drift_position_n_[3];
+  NormalDistribution drift_attitude_n_[3];
   UniformDistribution position_u_[3];
   UniformDistribution attitude_u_[3];
   UniformDistribution linear_velocity_u_[3];
   UniformDistribution angular_velocity_u_[3];
+  UniformDistribution drift_position_u_[3];
+  UniformDistribution drift_attitude_u_[3];
+
 
   CovarianceMatrix pose_covariance_matrix_;
   CovarianceMatrix twist_covariance_matrix_;
+  CovarianceMatrix drift_covariance_matrix_;
 
   int measurement_delay_;
   int measurement_divisor_;
@@ -149,6 +187,9 @@ class GazeboOdometryPlugin : public ModelPlugin {
   gazebo::transport::PublisherPtr position_stamped_pub_;
   gazebo::transport::PublisherPtr transform_stamped_pub_;
   gazebo::transport::PublisherPtr odometry_pub_;
+  gazebo::transport::PublisherPtr gt_odometry_pub_;
+  gazebo::transport::PublisherPtr gt_pose_pub_;
+  gazebo::transport::PublisherPtr drift_pub_;
 
   /// \brief    Special-case publisher to publish stamped transforms with
   ///           frame IDs. The ROS interface plugin (if present) will

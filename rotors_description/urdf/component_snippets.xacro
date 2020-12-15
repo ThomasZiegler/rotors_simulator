@@ -352,11 +352,13 @@
   <xacro:macro name="odometry_plugin_macro"
     params="
       namespace odometry_sensor_suffix parent_link pose_topic pose_with_covariance_topic
-      position_topic transform_topic odometry_topic parent_frame_id child_frame_id
-      mass_odometry_sensor measurement_divisor measurement_delay unknown_delay
-      noise_normal_position noise_normal_quaternion noise_normal_linear_velocity
-      noise_normal_angular_velocity noise_uniform_position
-      noise_uniform_quaternion noise_uniform_linear_velocity
+      position_topic transform_topic odometry_topic gt_odometry_topic drift_topic drift_started_topic
+      gt_pose_topic
+      parent_frame_id child_frame_id mass_odometry_sensor measurement_divisor measurement_delay unknown_delay
+      noise_normal_position noise_normal_quaternion noise_normal_drift_position
+      noise_normal_drift_quaternion noise_normal_linear_velocity
+      noise_normal_angular_velocity noise_uniform_position noise_uniform_quaternion
+      noise_uniform_drift_position noise_uniform_drift_quaternion noise_uniform_linear_velocity
       noise_uniform_angular_velocity enable_odometry_map odometry_map
       image_scale *inertia *origin">
     <!-- odometry link -->
@@ -382,6 +384,10 @@
         <positionTopic>${position_topic}</positionTopic>
         <transformTopic>${transform_topic}</transformTopic>
         <odometryTopic>${odometry_topic}</odometryTopic>
+        <gtOdometryTopic>${gt_odometry_topic}</gtOdometryTopic>
+        <driftTopic>${drift_topic}</driftTopic>
+        <driftStartedTopic>${drift_started_topic}</driftStartedTopic>
+        <gtPoseTopic>${gt_pose_topic}</gtPoseTopic>
         <parentFrameId>${parent_frame_id}</parentFrameId> <!-- Use the scoped link name here. e.g. Model::link. -->
         <childFrameId>${child_frame_id}</childFrameId>
         <measurementDivisor>${measurement_divisor}</measurementDivisor> <!-- only every (seq % measurementDivisor) == 0 measurement is published [int] -->
@@ -389,10 +395,14 @@
         <unknownDelay>${unknown_delay}</unknownDelay> <!-- additional delay, that just gets added to the timestamp [s] -->
         <noiseNormalPosition>${noise_normal_position}</noiseNormalPosition> <!-- standard deviation of additive white gaussian noise [m] -->
         <noiseNormalQuaternion>${noise_normal_quaternion}</noiseNormalQuaternion> <!-- standard deviation white gaussian noise [rad]: q_m = q*quaternionFromSmallAngleApproximation(noiseNormalQ) -->
+        <noiseNormalDriftPosition>${noise_normal_drift_position}</noiseNormalDriftPosition> <!-- standard deviation of additive white gaussian noise [m] -->
+        <noiseNormalDriftQuaternion>${noise_normal_drift_quaternion}</noiseNormalDriftQuaternion> <!-- standard deviation white gaussian noise [rad]: q_m = q*quaternionFromSmallAngleApproximation(noiseNormalQ) -->
         <noiseNormalLinearVelocity>${noise_normal_linear_velocity}</noiseNormalLinearVelocity> <!-- standard deviation of additive white gaussian noise [m/s] -->
         <noiseNormalAngularVelocity>${noise_normal_angular_velocity}</noiseNormalAngularVelocity> <!-- standard deviation of additive white gaussian noise [rad/s] -->
         <noiseUniformPosition>${noise_uniform_position}</noiseUniformPosition> <!-- symmetric bounds of uniform noise [m] -->
         <noiseUniformQuaternion>${noise_uniform_quaternion}</noiseUniformQuaternion> <!-- symmetric bounds of uniform noise [rad], computation see above -->
+        <noiseUniformDriftPosition>${noise_uniform_drift_position}</noiseUniformDriftPosition> <!-- symmetric bounds of uniform noise [m] -->
+        <noiseUniformDriftQuaternion>${noise_uniform_drift_quaternion}</noiseUniformDriftQuaternion> <!-- symmetric bounds of uniform noise [rad], computation see above -->
         <noiseUniformLinearVelocity>${noise_uniform_linear_velocity}</noiseUniformLinearVelocity> <!-- symmetric bounds of uniform noise [m/s] -->
         <noiseUniformAngularVelocity>${noise_uniform_angular_velocity}</noiseUniformAngularVelocity> <!-- symmetric bounds of uniform noise [rad/s] -->
         <xacro:if value="${enable_odometry_map}">
@@ -752,6 +762,10 @@
         position_topic="position"
         transform_topic="transform"
         odometry_topic="odometry"
+        gt_odometry_topic="gt_odometry"
+	    drift_topic="drift"
+	    drift_started_topic="drift_started"
+	    gt_pose_topic="gt_pose"
         parent_frame_id="world"
         child_frame_id="${namespace}/base_link"
         mass_odometry_sensor="0.00001"
@@ -760,10 +774,14 @@
         unknown_delay="0.0"
         noise_normal_position="0 0 0"
         noise_normal_quaternion="0 0 0"
+        noise_normal_drift_position="0 0 0"
+        noise_normal_drift_quaternion="0 0 0"
         noise_normal_linear_velocity="0 0 0"
         noise_normal_angular_velocity="0 0 0"
         noise_uniform_position="0 0 0"
         noise_uniform_quaternion="0 0 0"
+        noise_uniform_drift_position="0 0 0"
+        noise_uniform_drift_quaternion="0 0 0"
         noise_uniform_linear_velocity="0 0 0"
         noise_uniform_angular_velocity="0 0 0"
         enable_odometry_map="false"
@@ -824,6 +842,10 @@
       position_topic="ground_truth/position"
       transform_topic="ground_truth/transform"
       odometry_topic="ground_truth/odometry"
+      gt_odometry_topic="ground_truth/gt_odometry"
+      drift_topic="ground_truth/drift"
+      drift_started_topic="ground_truth/drift_started"
+      gt_pose_topic="ground_truth/gt_pose"
       parent_frame_id="world"
       child_frame_id="${namespace}/base_link"
       mass_odometry_sensor="0.00001"
@@ -832,10 +854,14 @@
       unknown_delay="0.0"
       noise_normal_position="0 0 0"
       noise_normal_quaternion="0 0 0"
+      noise_normal_drift_position="0 0 0"
+      noise_normal_drift_quaternion="0 0 0"
       noise_normal_linear_velocity="0 0 0"
       noise_normal_angular_velocity="0 0 0"
       noise_uniform_position="0 0 0"
       noise_uniform_quaternion="0 0 0"
+      noise_uniform_drift_position="0 0 0"
+      noise_uniform_drift_quaternion="0 0 0"
       noise_uniform_linear_velocity="0 0 0"
       noise_uniform_angular_velocity="0 0 0"
       enable_odometry_map="false"
@@ -914,11 +940,12 @@
       pressure_variance="0.0">
       <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" />
       <origin xyz="0 0 0" rpy="0 0 0" />
-    </xacro:pressure_sensor_plugin_macro>
+   </xacro:pressure_sensor_plugin_macro>
   </xacro:macro>
 
   <xacro:macro name="default_mavlink_interface" params="namespace imu_sub_topic rotor_count">
     <xacro:mavlink_interface_macro
+
       namespace="${namespace}"
       mavlink_sub_topic="/mavlink/from"
       imu_sub_topic="${imu_sub_topic}"

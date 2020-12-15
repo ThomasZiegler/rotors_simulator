@@ -1,0 +1,12 @@
+syntax = "proto2";
+package gz_geometry_msgs;
+
+import "Header.proto";
+import "PoseWithCovariance.proto";
+
+// Drift message type which is emitted by
+// GazeboMultirotorBasePlugin
+message Drift {
+  required gz_std_msgs.Header header = 1;
+  required PoseWithCovariance pose = 2;
+}

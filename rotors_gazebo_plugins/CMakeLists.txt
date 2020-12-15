@@ -490,7 +490,7 @@ endif()
 
 #======================================= PRESSURE PLUGIN ========================================//
 add_library(rotors_gazebo_pressure_plugin SHARED src/gazebo_pressure_plugin.cpp)
-target_link_libraries(rotors_gazebo_pressure_plugin ${target_linking_LIBRARIES}  ${GLOG_LIBRARIES})
+target_link_libraries(rotors_gazebo_pressure_plugin ${target_linking_LIBRARIES}  ${glog_catkin_LIBRARIES})
 if (NOT NO_ROS)
   add_dependencies(rotors_gazebo_pressure_plugin ${catkin_EXPORTED_TARGETS})
 endif()

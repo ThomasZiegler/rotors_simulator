@@ -1,0 +1,8 @@
+syntax = "proto2";
+package gz_std_msgs;
+
+// Header type designed to be added to other
+// Gazebo message types.
+message Bool {
+  required bool data = 1;
+}

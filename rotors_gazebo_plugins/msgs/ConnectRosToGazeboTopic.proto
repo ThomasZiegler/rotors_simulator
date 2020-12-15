@@ -17,6 +17,7 @@ message ConnectRosToGazeboTopic
   	COMMAND_MOTOR_SPEED = 1;
   	ROLL_PITCH_YAWRATE_THRUST = 2;
   	WIND_SPEED = 3;
+    DRIFT_STARTED = 5;
   }
   required MsgType msgType = 4;
 }
